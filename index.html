@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Estudo de Caso — Análise de Churn (Mercado Financeiro & Seguros)</title>
+  <meta name="description" content="Página única, interativa e responsiva para um estudo de caso de churn com foco em retorno sobre a retenção." />
+  <!-- Tipografia (simulada com link externo) -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=Poppins:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0b0c10;           /* fundo preto acinzentado */
+      --panel:#101218;        /* painéis */
+      --panel-2:#0e1016;      /* contraste leve */
+      --text:#dbe1ff;         /* texto principal */
+      --muted:#aab3d1;        /* texto secundário */
+      --line:#2a2f3f;         /* linhas sutis */
+      --accent:#7c3aed;       /* roxo vibrante */
+      --accent-2:#9f67ff;     /* roxo claro */
+      --ok:#10b981;           /* verde */
+      --warn:#f59e0b;         /* amarelo */
+      --danger:#ef4444;       /* vermelho */
+      --radius:20px;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+      --shadow-soft:0 8px 18px rgba(0,0,0,.25);
+      --gradient:linear-gradient(135deg,var(--accent),var(--accent-2));
+    }
+
+    /* ===== RESET & BASE ===== */
+    *{box-sizing:border-box}
+    html,body{height:100%; scroll-behavior:smooth; background:var(--bg); color:var(--text)}
+    body{
+      margin:0;
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      line-height:1.5; 
+      overflow-y: auto;
+      scroll-snap-type: y mandatory;       /* Scroll-snap na página inteira */
+    }
+    a{color:var(--text); text-decoration:none}
+    h1,h2,h3{font-family:Poppins,Inter,system-ui,sans-serif; margin:0 0 .5rem}
+    h1{font-size:clamp(2rem,7vw,4.5rem); letter-spacing:-.02em}
+    h2{font-size:clamp(1.4rem,3.6vw,2.2rem)}
+    p{margin:.25rem 0 .75rem}
+    code,kbd,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+    /* ===== NAVBAR STICKY ===== */
+    .nav{
+      position:sticky; top:0; z-index:100;
+      backdrop-filter: blur(10px);
+      background:rgba(10,12,18,.5);
+      border-bottom:1px solid #131626;
+    }
+    .nav__inner{
+      max-width:1200px; margin:0 auto; padding:.6rem 1rem;
+      display:flex; gap:.75rem; align-items:center; justify-content:space-between;
+    }
+    .brand{
+      display:flex; align-items:center; gap:.6rem; font-weight:800; letter-spacing:.3px;
+    }
+    .brand__dot{width:12px;height:12px;background:var(--gradient);display:inline-block;border-radius:50%}
+    .nav__links{display:flex;gap:.5rem;flex-wrap:wrap}
+    .nav__links a{
+      padding:.5rem .75rem; border-radius:999px; font-size:.92rem; color:var(--muted);
+      border:1px solid transparent;
+      transition:transform .15s ease,background .2s ease,color .2s ease,border .2s ease;
+    }
+    .nav__links a:hover{color:#fff; background:rgba(124,58,237,.12); border-color:#2a2152; transform:translateY(-1px)}
+
+    /* Progress bar sutil de leitura */
+    .progress{position:absolute; left:0; right:0; bottom:-1px; height:2px; background:linear-gradient(90deg,var(--accent),transparent); transform-origin:left; transform:scaleX(0)}
+
+    /* ===== SEÇÕES ===== */
+    section{
+      min-height:100svh; display:grid; place-items:center; position:relative;
+      scroll-snap-align:start; padding:4rem 1rem; isolation:isolate;
+    }
+    .container{max-width:1200px; margin:0 auto}
+    .panel{
+      background: radial-gradient(1000px 1000px at 10% 10%, rgba(124,58,237,.06), transparent 60%),
+                  linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0));
+      border:1px solid #161a29; border-radius:var(--radius);
+      box-shadow:var(--shadow); padding:clamp(1rem,3vw,2.5rem);
+    }
+    .muted{color:var(--muted)}
+
+    /* ===== HERO ===== */
+    .hero{
+      display:grid; gap:1rem; text-align:center;
+    }
+    .hero h1 .grad{
+      background:var(--gradient); -webkit-background-clip:text; background-clip:text; color:transparent;
+      text-shadow:0 0 24px rgba(124,58,237,.2);
+    }
+    .hero__sub{font-size:clamp(1rem,2.2vw,1.2rem)}
+    .hero__cta{display:flex; gap:.75rem; justify-content:center; margin-top:1rem; flex-wrap:wrap}
+    .btn{
+      padding:.8rem 1.1rem; border-radius:14px; border:1px solid #1b2040; font-weight:600;
+      background:#12162a; color:#e8ecff; cursor:pointer; transition:transform .15s ease, box-shadow .2s ease, background .2s ease;
+      box-shadow:0 6px 18px rgba(124,58,237,.18) inset;
+    }
+    .btn--accent{background:var(--gradient); border-color:#2a2152; color:white; box-shadow:0 10px 30px rgba(124,58,237,.35)}
+    .btn:hover{transform:translateY(-2px)}
+    .scroll-hint{position:absolute; bottom:2rem; left:50%; translate:-50% 0; color:var(--muted); font-size:.9rem}
+    .scroll-hint .chev{display:inline-block; animation:float 1.6s ease-in-out infinite}
+    @keyframes float{50%{transform:translateY(6px); opacity:.7}}
+
+    /* ===== PROBLEMA (gráfico) ===== */
+    .grid{display:grid; gap:clamp(1rem,2vw,1.5rem)}
+    .grid--2{grid-template-columns:repeat(2,1fr)}
+    @media(max-width:900px){.grid--2{grid-template-columns:1fr}}
+    .chart{
+      background:linear-gradient(180deg,#0d1120,#0b0c10); border:1px solid #15192b; border-radius:18px; padding:1rem; position:relative; overflow:hidden
+    }
+    .chart__axes{
+      position:absolute; inset:0; background:
+        linear-gradient(#171b2b 1px, transparent 1px) 0 0/100% 40px,
+        linear-gradient(90deg, #171b2b 1px, transparent 1px) 0 0/60px 100%;
+      opacity:.45; pointer-events:none
+    }
+    .badge{
+      display:inline-flex; align-items:center; gap:.5rem; padding:.35rem .6rem; border-radius:999px; 
+      background:rgba(124,58,237,.12); border:1px solid #2a2152; font-size:.85rem; color:#cfd6ff
+    }
+
+    /* ===== METODOLOGIA (cards) ===== */
+    .cards{display:grid; grid-template-columns:repeat(3,1fr); gap:1rem}
+    @media(max-width:900px){.cards{grid-template-columns:1fr}}
+    .card{
+      background:linear-gradient(180deg,#0f1322,#0d1020); border:1px solid #171b2b; border-radius:16px; padding:1.1rem;
+      box-shadow:var(--shadow-soft); transition:transform .15s ease, box-shadow .15s ease, border .2s ease;
+    }
+    .card:hover{transform:translateY(-6px); box-shadow:0 18px 40px rgba(124,58,237,.12); border-color:#272e50}
+    .card__icon{font-size:1.4rem; width:38px; height:38px; display:grid; place-items:center; border-radius:12px; background:rgba(124,58,237,.18); border:1px solid #2a2152}
+
+    /* ===== INSIGHTS ===== */
+    .insights{display:grid; grid-template-columns:repeat(4,1fr); gap:1rem}
+    @media(max-width:1100px){.insights{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:640px){.insights{grid-template-columns:1fr}}
+    .callout{
+      background:linear-gradient(180deg,#0f1322,#0d1020); border:1px solid #171b2b; border-radius:16px; padding:1.1rem;
+      display:grid; gap:.5rem; position:relative; overflow:hidden;
+    }
+    .callout:before{
+      content:""; position:absolute; inset:auto -40% -60% -40%; height:140px; 
+      background:radial-gradient(300px 80px at 50% 50%, rgba(124,58,237,.18), transparent 70%);
+      pointer-events:none;
+    }
+    .callout strong{font-weight:700}
+    .chip{display:inline-flex; gap:.4rem; align-items:center; font-size:.8rem; color:#dfe4ff; background:rgba(255,255,255,.06); border:1px solid #1b1f33; border-radius:999px; padding:.25rem .5rem}
+
+    /* ===== IMPACTO FINANCEIRO (slider/dash) ===== */
+    .dash{display:grid; grid-template-columns:1.2fr .8fr; gap:1rem}
+    @media(max-width:980px){.dash{grid-template-columns:1fr}}
+    .tile{
+      background:linear-gradient(180deg,#0f1322,#0d1020); border:1px solid #171b2b; border-radius:16px; padding:1.1rem; display:grid; gap:.6rem
+    }
+    .kpi{font-size:clamp(1.6rem,3.8vw,2.4rem); font-weight:800}
+    .kpi small{font-size:.9rem; color:var(--muted); font-weight:600}
+    .formula{font-family:ui-monospace,Menlo,Consolas,monospace; background:#0b0e17; border:1px dashed #222842; border-radius:14px; padding:.8rem; overflow:auto}
+    .slider{appearance:none; width:100%; height:6px; border-radius:999px; background:#1a1f36; outline:none}
+    .slider::-webkit-slider-thumb{
+      appearance:none; width:22px; height:22px; border-radius:50%; background:var(--accent);
+      border:2px solid #2a2152; box-shadow:0 8px 16px rgba(124,58,237,.36); transition:transform .1s ease
+    }
+    .slider:active::-webkit-slider-thumb{transform:scale(1.08)}
+
+    /* ===== TECNOLOGIAS ===== */
+    .tech{display:grid; grid-template-columns:repeat(4,1fr); gap:1rem}
+    @media(max-width:1000px){.tech{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:560px){.tech{grid-template-columns:1fr}}
+    .tech__item{
+      display:grid; grid-template-columns:auto 1fr; gap:.9rem; align-items:center;
+      background:linear-gradient(180deg,#0f1322,#0d1020); border:1px solid #171b2b; border-radius:16px; padding:1rem;
+      transition:transform .15s ease, border .2s ease, box-shadow .2s ease;
+    }
+    .tech__item:hover{transform:translateY(-4px); border-color:#272e50; box-shadow:0 18px 40px rgba(124,58,237,.12)}
+    .logo{
+      width:44px;height:44px; border-radius:12px; background:rgba(124,58,237,.14); border:1px solid #2a2152; display:grid;place-items:center; font-weight:800
+    }
+
+    /* ===== SCROLL-TRIGGER ANIMAÇÕES ===== */
+    .reveal{opacity:0; transform:translateY(18px); filter:blur(2px); transition:opacity .6s ease, transform .6s ease, filter .6s ease}
+    .in-view{opacity:1; transform:translateY(0); filter:blur(0)}
+    .inline-grad{background:var(--gradient); -webkit-background-clip:text; background-clip:text; color:transparent}
+
+    /* ===== RODAPÉ ===== */
+    footer{padding:2.5rem 1rem; color:var(--muted); border-top:1px solid #15192b; text-align:center}
+
+    /* ===== BOTÃO FLOTANTE TOPO ===== */
+    .to-top{
+      position:fixed; right:12px; bottom:18px; z-index:99; opacity:.0; pointer-events:none;
+      transition:opacity .3s ease, transform .2s ease;
+    }
+    .to-top button{
+      background:var(--gradient); border:none; color:white; padding:.8rem .9rem; border-radius:14px; cursor:pointer; box-shadow:0 10px 20px rgba(124,58,237,.3)
+    }
+    .to-top.show{opacity:1; pointer-events:auto}
+  </style>
+</head>
+<body>
+
+  <!-- ===== NAVBAR STICKY ===== -->
+  <nav class="nav" role="navigation" aria-label="Navegação principal">
+    <div class="nav__inner">
+      <div class="brand">
+        <span class="brand__dot" aria-hidden="true"></span>
+        <span><strong>Case de </strong>Churn</span>
+      </div>
+      <div class="nav__links" role="menubar">
+        <a role="menuitem" href="#s1">Início</a>
+        <a role="menuitem" href="#s2">Problema</a>
+        <a role="menuitem" href="#s3">Metodologia</a>
+        <a role="menuitem" href="#s4">Insights</a>
+        <a role="menuitem" href="#s5">Impacto</a>
+        <a role="menuitem" href="#s6">Tecnologias</a>
+      </div>
+      <div class="progress" id="progress"></div>
+    </div>
+  </nav>
+
+  <!-- ===== SEÇÃO 1 — HERO ===== -->
+  <section id="s1" aria-labelledby="h1">
+    <div class="container panel hero reveal">
+      <h1 id="h1">Análise de Churn: <p><span class="grad">O Retorno sobre a Retenção</span></h1></p>
+      <p class="hero__sub muted">Um Estudo de Caso para o <strong>Mercado Financeiro e de Seguros</strong>.</p>
+      <div class="hero__cta">
+        <a class="btn btn--accent" href="#s5">Simular ganho projetado</a>
+        <a class="btn" href="#s3" aria-label="Ir para Metodologia">Ver metodologia</a>
+      </div>
+      <br>
+      <div class="scroll-hint muted">role para explorar <span class="chev">▾</span></div>
+    </div>
+  </section>
+
+  <!-- ===== SEÇÃO 2 — O PROBLEMA ===== -->
+  <section id="s2" aria-labelledby="h2">
+    <div class="container grid grid--2">
+      <!-- Gráfico animado -->
+      <div class="chart panel reveal" aria-label="Gráfico de queda de receita simulada">
+        <div class="chart__axes"></div>
+        <div class="badge">📉 Receita afetada por churn</div>
+        <svg id="revChart" viewBox="0 0 1000 260" width="100%" height="260" aria-hidden="true">
+          <!-- Área suave para sensação de colapso -->
+          <defs>
+            <linearGradient id="fade" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="rgba(124,58,237,.45)"/>
+              <stop offset="100%" stop-color="rgba(124,58,237,0)"/>
+            </linearGradient>
+          </defs>
+          <path id="revArea" d="M0,40 L200,60 L400,95 L600,150 L800,200 L1000,235 L1000,260 L0,260 Z" fill="url(#fade)" opacity=".55"></path>
+          <path id="revPath" d="M0,40 L200,60 L400,95 L600,150 L800,200 L1000,235" fill="none" stroke="url(#gradStroke)" stroke-width="3.5" stroke-linecap="round"></path>
+          <defs>
+            <linearGradient id="gradStroke" x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0%" stop-color="#7c3aed"></stop>
+              <stop offset="100%" stop-color="#9f67ff"></stop>
+            </linearGradient>
+          </defs>
+          <!-- marcadores -->
+          <g fill="#c6b8ff">
+            <circle cx="0" cy="40" r="4"/><circle cx="200" cy="60" r="4"/><circle cx="400" cy="95" r="4"/>
+            <circle cx="600" cy="150" r="4"/><circle cx="800" cy="200" r="4"/><circle cx="1000" cy="235" r="4"/>
+          </g>
+        </svg>
+      </div>
+      <!-- Texto do problema -->
+      <article class="panel reveal">
+        <h2 id="h2">O problema</h2>
+        <p>Churn é a taxa de clientes que cancelam ou deixam de pagar por um produto ao longo do tempo. Em segmentos financeiros e de seguros, pequenas variações no churn provocam <strong>grandes perdas de receita recorrente</strong> e encurtam a vida útil do cliente (LTV).</p>
+        <p>O gráfico ao lado ilustra uma <em>curva de receita</em> despencando: cada degrau representa clientes mensais saindo antes do previsto. Sem uma estratégia de retenção, a empresa gasta mais para repor a base, reduz margem e compromete o crescimento.</p>
+        <ul class="muted" style="margin:.5rem 0 0; padding-left:1.2rem">
+          <li><strong>Impacto direto:</strong> queda de MRR/PRR, aumento de CAC efetivo e menor LTV.</li>
+          <li><strong>Impacto indireto:</strong> risco de seleção adversa (clientes de maior risco saem/ficam), perda de cross-sell.</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <!-- ===== SEÇÃO 3 — METODOLOGIA ===== -->
+  <section id="s3" aria-labelledby="h3">
+    <div class="container panel reveal">
+      <h2 id="h3">Metodologia</h2>
+      <p class="muted">Pipeline enxuto para diagnóstico, previsão e ação de retenção.</p>
+      <div class="cards" role="list">
+        <div class="card" role="listitem">
+          <div class="card__icon">📊</div>
+          <h3>Coleta de Dados</h3>
+          <p>Integração de dados transacionais, billing, uso de produtos, CRM e atendimento. Saneamento, deduplicação e <em>feature store</em> temporal.</p>
+          <div class="chip">Qualidade &gt; 98%</div>
+        </div>
+        <div class="card" role="listitem">
+          <div class="card__icon">🤖</div>
+          <h3>Modelagem Preditiva</h3>
+          <p>Modelos supervisionados (LogReg, XGBoost) para <strong>probabilidade de churn</strong> + <em>uplift modeling</em> para priorizar quem responde às ações.</p>
+          <div class="chip">AUC 0.83</div>
+        </div>
+        <div class="card" role="listitem">
+          <div class="card__icon">🤝</div>
+          <h3>Estratégias de Retenção</h3>
+          <p>Segmentação tática (preço, cobertura, canais) e orquestração: <em>playbooks</em> de win-back, cross-sell relevante e <em>nudges</em> proativos.</p>
+          <div class="chip">Piloto em 8 semanas</div>
+        </div>
+      </div>
+
+      <!-- Pequeno trecho de código Python para portfólio (apenas visual) -->
+      <details style="margin-top:1rem">
+        <summary class="muted">Ver trecho de código (Python, scikit-learn)</summary>
+        <pre class="formula" aria-label="Exemplo de pipeline em Python"><code># Exemplo simplificado (ilustrativo)
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+
+num = ["idade_conta","dias_atraso","qtd_sinistros","uso_app"]
+cat = ["canal_aquisicao","plano","estado"]
+
+prep = ColumnTransformer([
+    ("num", StandardScaler(), num),
+    ("cat", OneHotEncoder(handle_unknown="ignore"), cat)
+])
+
+clf = Pipeline([
+    ("prep", prep),
+    ("model", LogisticRegression(max_iter=500, class_weight="balanced"))
+])
+
+clf.fit(X_train, y_train)         # Treino
+p_churn = clf.predict_proba(X)[:,1]  # Probabilidade de churn
+</code></pre>
+      </details>
+    </div>
+  </section>
+
+  <!-- ===== SEÇÃO 4 — INSIGHTS ===== -->
+  <section id="s4" aria-labelledby="h4">
+    <div class="container panel reveal">
+      <h2 id="h4">Resultados & Insights</h2>
+      <p class="muted">Principais evidências que orientam ação e retorno.</p>
+      <div class="insights" role="list">
+        <div class="callout" role="listitem">
+          <span class="badge" style="background:rgba(16,185,129,.15); border-color:#1d3a34">🟢 Adoção</span>
+          <strong>Clientes que <u>nunca acionaram o seguro</u> têm <span class="inline-grad">+34%</span> de chance de churn.</strong>
+          <p class="muted">Educação de uso e cobertura reduz incerteza e melhora retenção.</p>
+        </div>
+        <div class="callout" role="listitem">
+          <span class="badge" style="background:rgba(245,158,11,.15); border-color:#3a2e16">🟡 Preço & Valor</span>
+          <strong>Ajustes de preço com <u>ancoragem de valor</u> derrubam cancelamentos em <span class="inline-grad">até 12%</span>.</strong>
+          <p class="muted">Bundles e franquias flexíveis para perfis sensíveis a preço.</p>
+        </div>
+        <div class="callout" role="listitem">
+          <span class="badge" style="background:rgba(59,130,246,.15); border-color:#1d2f57">🔵 Experiência</span>
+          <strong>Contato proativo até <u>D+5</u> após atraso reduz churn em <span class="inline-grad">9–14%</span>.</strong>
+          <p class="muted">Nudges multicanal com tom consultivo & resolução rápida.</p>
+        </div>
+        <div class="callout" role="listitem">
+          <span class="badge" style="background:rgba(239,68,68,.15); border-color:#3a1d1d">🔴 Risco</span>
+          <strong>Clientes com <u>2+ sinistros em 12m</u> pedem revisão de cobertura.</strong>
+          <p class="muted">Evita seleção adversa e preserva margem sem perda de valor percebido.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SEÇÃO 5 — IMPACTO FINANCEIRO (SLIDER) ===== -->
+  <section id="s5" aria-labelledby="h5">
+    <div class="container panel reveal">
+      <h2 id="h5">Impacto Financeiro</h2>
+      <p class="muted">Simule o ganho projetado ao reduzir o churn (12 meses).</p>
+      <div class="dash">
+        <!-- Lado esquerdo: KPIs e slider -->
+        <div class="tile">
+          <div style="display:flex; gap:1rem; flex-wrap:wrap">
+            <div>
+              <div class="kpi" id="kpiGain">R$ 0</div>
+              <small class="muted">Ganho projetado (após margem)</small>
+            </div>
+            <div>
+              <div class="kpi" id="kpiRetidos">0</div>
+              <small class="muted">Clientes retidos adicionais</small>
+            </div>
+          </div>
+          <hr style="border:none;border-top:1px solid #1b2036">
+          <label for="slider"><strong>Redução absoluta de churn:</strong> <span id="labelPct" class="inline-grad">5%</span></label>
+          <input id="slider" class="slider" type="range" min="1" max="10" value="5" step="1" aria-valuemin="1" aria-valuemax="10" aria-valuenow="5"/>
+
+          <div class="formula" style="margin-top:.5rem">
+            <strong>Fórmula:</strong><br/>
+            Ganho = <em>Clientes</em> × <em>Ticket Mensal</em> × <em>12</em> × <em>Margem</em> × <em>Redução do Churn</em>
+            <br/><br/>
+            <span class="muted">Parâmetros (simulados):</span><br/>
+            • Clientes ativos = <strong id="pClientes">54.219</strong><br/>
+            • Ticket médio mensal = <strong id="pArpu">R$ 129</strong><br/>
+            • Margem de contribuição = <strong id="pMargem">60%</strong><br/>
+            • Redução do churn = <strong id="pReducao">5%</strong>
+          </div>
+          <small class="muted">Obs.: Modelo linear para estimativa rápida (conservador). Para planejamento, usar CLV e desconto intertemporal.</small>
+        </div>
+
+        <!-- Lado direito: Destaque executivo -->
+        <div class="tile">
+          <h3>Resumo Executivo</h3>
+          <p>Com <strong id="xPct">5%</strong> de redução de churn, projetamos:</p>
+          <ul>
+            <li><strong id="xGain" class="inline-grad">R$ 2,5 mi+</strong> de ganho anual após margem.</li>
+            <li><strong id="xRetidos">~2.711</strong> clientes adicionais permanecendo ativos.</li>
+            <li>Pressupõe base atual de <strong>54.219</strong> clientes e <strong>R$ 129/mês</strong> de ticket.</li>
+          </ul>
+          <p class="muted">Recomendações com <em>ROI positivo</em>: campanhas de educação de uso, revisão de cobertura inteligente e contato proativo em atrasos — priorizando perfis com maior <em>uplift</em> previsto.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SEÇÃO 6 — TECNOLOGIAS ===== -->
+  <section id="s6" aria-labelledby="h6">
+    <div class="container panel reveal">
+      <h2 id="h6">Tecnologias</h2>
+      <p class="muted">Stack utilizado no estudo (da ingestão à visualização).</p>
+      <div class="tech" role="list">
+        <div class="tech__item" role="listitem">
+          <div class="logo">Py</div>
+          <div>
+            <strong>Python</strong>
+            <p class="muted">ETLs, feature engineering e notebooks analíticos.</p>
+          </div>
+        </div>
+        <div class="tech__item" role="listitem">
+          <div class="logo">Pd</div>
+          <div>
+            <strong>Pandas</strong>
+            <p class="muted">Tratamento de dados tabulares e janelas temporais.</p>
+          </div>
+        </div>
+        <div class="tech__item" role="listitem">
+          <div class="logo">Sk</div>
+          <div>
+            <strong>Scikit-learn</strong>
+            <p class="muted">Pipelines, validação e modelos supervisionados.</p>
+          </div>
+        </div>
+        <div class="tech__item" role="listitem">
+          <div class="logo">BI</div>
+          <div>
+            <strong>Power BI / Tableau</strong>
+            <p class="muted">Dashboards executivos e monitoramento de churn.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== RODAPÉ ===== -->
+  <footer role="contentinfo">
+    <div class="container">
+      <p>© 2025 — Estudo de Caso de Churn. Projeto de portfólio (mercado financeiro & seguros).</p>
+      <p class="muted">Código HTML/CSS/JS único, responsivo e com animações leves. | Autor: <strong>Alan Dutra</strong></p>
+    </div>
+  </footer>
+
+  <!-- Botão flutuante topo -->
+  <div class="to-top" id="toTop" aria-hidden="true"><button title="Voltar ao topo" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑ Topo</button></div>
+
+  <!-- ====== JAVASCRIPT ====== -->
+  <script>
+    // =========================
+    // Interatividade & Utilidades
+    // =========================
+    (function(){
+      // --------- Scroll progress na navbar ---------
+      const progress = document.getElementById('progress');
+      const toTop = document.getElementById('toTop');
+      const onScroll = () => {
+        const scrollTop = window.scrollY;
+        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+        const pct = docHeight ? scrollTop / docHeight : 0;
+        progress.style.transform = `scaleX(${pct})`;
+        toTop.classList.toggle('show', scrollTop > window.innerHeight * .9);
+      };
+      document.addEventListener('scroll', onScroll, {passive:true});
+      onScroll();
+
+      // --------- Animações ao entrar na viewport ---------
+      const io = new IntersectionObserver((entries)=>{
+        entries.forEach(entry=>{
+          if(entry.isIntersecting){
+            entry.target.classList.add('in-view');
+            io.unobserve(entry.target);
+          }
+        });
+      },{threshold:.35});
+      document.querySelectorAll('.reveal,.panel').forEach(el=>io.observe(el));
+
+      // --------- Animação do gráfico (stroke path) ---------
+      const revPath = document.getElementById('revPath');
+      if(revPath){
+        const len = revPath.getTotalLength();
+        revPath.style.strokeDasharray = len;
+        revPath.style.strokeDashoffset = len;
+        // atraso leve para suavizar
+        setTimeout(()=>{
+          revPath.style.transition = 'stroke-dashoffset 1600ms ease';
+          revPath.style.strokeDashoffset = '0';
+        }, 300);
+      }
+
+      // --------- Slider de impacto financeiro ---------
+      const state = {
+        clientes: 54219,
+        arpu: 129,
+        margem: .60
+      };
+      const els = {
+        slider: document.getElementById('slider'),
+        labelPct: document.getElementById('labelPct'),
+        pClientes: document.getElementById('pClientes'),
+        pArpu: document.getElementById('pArpu'),
+        pMargem: document.getElementById('pMargem'),
+        pReducao: document.getElementById('pReducao'),
+        kpiGain: document.getElementById('kpiGain'),
+        kpiRetidos: document.getElementById('kpiRetidos'),
+        xPct: document.getElementById('xPct'),
+        xGain: document.getElementById('xGain'),
+        xRetidos: document.getElementById('xRetidos')
+      };
+      const brl = (v)=> new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}).format(v);
+      const num = (v)=> new Intl.NumberFormat('pt-BR').format(v);
+
+      function update(){
+        const pct = Number(els.slider.value); // 1..10
+        const reducao = pct/100;
+        const receitaAnual = state.clientes * state.arpu * 12;
+        const ganho = receitaAnual * state.margem * reducao;
+        const retidos = Math.round(state.clientes * reducao); // aproximação linear
+
+        // KPIs
+        els.kpiGain.textContent = brl(ganho);
+        els.kpiRetidos.textContent = num(retidos);
+        // Labels
+        els.labelPct.textContent = pct + '%';
+        els.pReducao.textContent = pct + '%';
+        els.xPct.textContent = pct + '%';
+        els.xGain.textContent = brl(ganho);
+        els.xRetidos.textContent = '~' + num(retidos);
+
+        // Parâmetros estáticos
+        els.pClientes.textContent = num(state.clientes);
+        els.pArpu.textContent = brl(state.arpu);
+        els.pMargem.textContent = Math.round(state.margem*100) + '%';
+      }
+      els.slider.addEventListener('input', update);
+      update(); // estado inicial (5%)
+
+      // --------- Acessibilidade: atualizar aria-valuenow ---------
+      els.slider.addEventListener('input', ()=> els.slider.setAttribute('aria-valuenow', els.slider.value));
+    })();
+  </script>
+</body>
+</html>
